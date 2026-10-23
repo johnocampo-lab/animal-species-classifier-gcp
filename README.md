@@ -7,7 +7,7 @@ An end-to-end Machine Learning demo showcasing transfer learning, model evaluati
 ## 🏗️ Architecture & Technology Stack
 
 ```
-[ Dataset (CIFAR-10 Animal Subset; optional STL-10) ]
+[ Dataset (CIFAR-10 Animal Subset) ]
                │
                ▼
  [ Stratified Splitting (Train 70% / Val 15% / Test 15%) ]
@@ -71,7 +71,7 @@ Data under `data/processed/` has three splits (stratified 70% / 15% / 15%):
 | **Validation** | Held-out slice of CIFAR-10 train fold | Epoch metrics during training; `best_model.pt` |
 | **Test** | **Official CIFAR-10 test fold** (animals only) | `training.evaluate` only — never used in training |
 
-With the default dataset, splits are loaded via `data/processed/dataset_meta.json` (no JPEG export). STL-10 / `--demo-sample` still use `train/`, `val/`, `test/` folders on disk.
+With the default dataset, splits are loaded via `data/processed/dataset_meta.json` (no JPEG export). `--demo-sample` writes `train/`, `val/`, `test/` folders for smoke tests only.
 
 ### 1. Train
 
@@ -207,11 +207,8 @@ bash cloud/01_setup_gcp.sh
 Default: **CIFAR-10** animal classes (real photos). Train/val are split from CIFAR’s official training fold; **test uses CIFAR-10’s official test images only** (not used during training).
 
 ```bash
-# Recommended — real animal photos (bird, cat, deer, dog, frog, horse)
+# Real animal photos (bird, cat, deer, dog, frog, horse)
 python -m data.download_data
-
-# Optional: STL-10 animals (96×96) if Stanford hosting is available
-python -m data.download_data --dataset stl10
 
 # Smoke test only — synthetic colored tiles, not animals
 python -m data.download_data --demo-sample

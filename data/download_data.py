@@ -3,7 +3,7 @@ data/download_data.py
 Prepares animal species data for training.
 
 Default: CIFAR-10 animal subset (real photos via torchvision).
-Optional: STL-10 on disk as JPEG folders, or --demo-sample for synthetic smoke tests only.
+Use --demo-sample only for fast CI/smoke tests (synthetic tiles, not real animals).
 """
 
 import argparse
@@ -21,14 +21,6 @@ def _reset_split_dirs(output_dir: str) -> None:
         split_dir = os.path.join(output_dir, split)
         if os.path.isdir(split_dir):
             shutil.rmtree(split_dir)
-
-
-def _save_split(split_name: str, images, labels, output_dir: str) -> None:
-    print(f"Saving {split_name} split ({len(images)} images)...")
-    for i, (img, label) in enumerate(zip(images, labels)):
-        class_folder = os.path.join(output_dir, split_name, label)
-        os.makedirs(class_folder, exist_ok=True)
-        img.save(os.path.join(class_folder, f"{label}_{i:05d}.jpg"), quality=95)
 
 
 def create_sample_dataset(output_dir: str, num_samples_per_class: int = 40):
@@ -78,66 +70,12 @@ def prepare_cifar10(raw_dir: str, output_dir: str, seed: int = 42) -> None:
     print(f"Registered dataset at {output_dir}/dataset_meta.json")
 
 
-def download_and_split_stl10(raw_dir: str, output_dir: str, seed: int = 42) -> None:
-    from sklearn.model_selection import train_test_split
-    import torchvision.datasets as datasets
-
-    os.makedirs(raw_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
-    _reset_split_dirs(output_dir)
-    meta = os.path.join(output_dir, "dataset_meta.json")
-    if os.path.isfile(meta):
-        os.remove(meta)
-
-    print("Downloading STL-10 dataset...")
-    dataset = datasets.STL10(root=raw_dir, split="train", download=True)
-    test_dataset = datasets.STL10(root=raw_dir, split="test", download=True)
-
-    stl10_classes = [
-        "airplane", "bird", "car", "cat", "deer", "dog", "frog", "horse", "ship", "truck"
-    ]
-    target_indices = {stl10_classes.index(cls): cls for cls in ANIMAL_CLASSES if cls in stl10_classes}
-
-    all_images = []
-    all_labels = []
-
-    for ds in [dataset, test_dataset]:
-        for img, label in zip(ds.data, ds.labels):
-            if label in target_indices:
-                img_pil = Image.fromarray(np.transpose(img, (1, 2, 0)))
-                all_images.append(img_pil)
-                all_labels.append(target_indices[label])
-
-    print(f"Total STL-10 animal images: {len(all_images)}.")
-
-    idx = np.arange(len(all_images))
-    train_idx, temp_idx, _, y_temp = train_test_split(
-        idx, all_labels, test_size=0.30, random_state=seed, stratify=all_labels
-    )
-    val_idx, test_idx, _, _ = train_test_split(
-        temp_idx, y_temp, test_size=0.50, random_state=seed, stratify=y_temp
-    )
-
-    for split_name, indices in [("train", train_idx), ("val", val_idx), ("test", test_idx)]:
-        imgs = [all_images[i] for i in indices]
-        lbls = [all_labels[i] for i in indices]
-        _save_split(split_name, imgs, lbls, output_dir)
-
-    print(f"Data prepared at {output_dir}")
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Download and split animal image dataset")
+    parser = argparse.ArgumentParser(description="Download and prepare animal image dataset")
     parser.add_argument(
         "--demo-sample",
         action="store_true",
         help="Synthetic colored tiles only (smoke test; not real animals)",
-    )
-    parser.add_argument(
-        "--dataset",
-        choices=("cifar10", "stl10"),
-        default="cifar10",
-        help="Real photo dataset (default: cifar10)",
     )
     parser.add_argument("--output-dir", type=str, default="data/processed")
     parser.add_argument("--raw-dir", type=str, default="data/raw")
@@ -148,10 +86,7 @@ def main():
         create_sample_dataset(args.output_dir)
         return
 
-    if args.dataset == "cifar10":
-        prepare_cifar10(args.raw_dir, args.output_dir, seed=args.seed)
-    else:
-        download_and_split_stl10(args.raw_dir, args.output_dir, seed=args.seed)
+    prepare_cifar10(args.raw_dir, args.output_dir, seed=args.seed)
 
 
 if __name__ == "__main__":

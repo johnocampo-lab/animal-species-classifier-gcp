@@ -10,8 +10,8 @@ __pycache__/
 
 # Data & checkpoints
 data/raw/
-data/raw_cifar_test/
 data/processed/
+.pytest_cache/
 checkpoints/
 models/*.pt
 models/*.onnx

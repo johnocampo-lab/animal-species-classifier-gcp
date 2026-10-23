@@ -15,7 +15,7 @@ End-to-end **animal species classifier** (6 classes: bird, cat, deer, dog, frog,
 |--------|------|
 | Training | PyTorch, torchvision MobileNetV3-Small, AdamW on classifier head |
 | Data (default) | CIFAR-10 animals via torchvision + `data/processed/dataset_meta.json` |
-| Data (alt) | STL-10 JPEG folders; `--demo-sample` = synthetic tiles only |
+| Data (smoke) | `--demo-sample` → ImageFolder JPEG tiles (tests/CI only) |
 | Eval | scikit-learn metrics, confusion matrix PNG |
 | Serving | FastAPI, ONNX Runtime CPU, `app/Dockerfile` |
 | GCP | GCS, Artifact Registry, Cloud Build, Cloud Run; Vertex custom job optional |
@@ -34,12 +34,12 @@ End-to-end **animal species classifier** (6 classes: bird, cat, deer, dog, frog,
 
 - **Default:** `python -m data.download_data` writes `dataset_meta.json`; loaders use official **CIFAR-10 test fold** for test (6k animals). No silent fallback to fake data.
 - **Train/val:** stratified from CIFAR train fold (~85% / ~15% of animal pool).
-- **ImageFolder path:** `train/`, `val/`, `test/` for STL-10 or `--demo-sample`.
+- **ImageFolder path:** `train/`, `val/`, `test/` only for `--demo-sample` smoke data.
 - Labels remapped to 0–5 for CIFAR (`CIFAR10_TO_ANIMAL_INDEX`).
 
 ## ML workflow
 
-1. `python -m data.download_data` (or `--demo-sample` / `--dataset stl10`)
+1. `python -m data.download_data` (or `--demo-sample` for smoke tests)
 2. `python -m training.train` — val each epoch; `best_model.pt` + final `model.pt` + ONNX export (`onnxscript` required)
 3. `python -m training.evaluate` — **test only**; uses `model.pt` by default
 4. `uvicorn app.main:app` locally; `bash cloud/04_deploy_cloud_run.sh` for prod

@@ -34,8 +34,7 @@ def load_model():
             class_names = json.load(f)
         print(f"Loaded {len(class_names)} classes: {class_names}")
     else:
-        print("Warning: Model artifacts not found yet. Predictions will return mock until model is trained.")
-        class_names = ["bird", "cat", "deer", "dog", "frog", "horse"]
+        print("Warning: Model artifacts not found yet. Predictions use mock scores until model is trained.")
 
 def preprocess_image(image_bytes: bytes, img_size: int = 224) -> np.ndarray:
     try:

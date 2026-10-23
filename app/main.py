@@ -22,7 +22,7 @@ MODEL_PATH = os.getenv("MODEL_PATH", "models/model.onnx")
 CLASSES_PATH = os.getenv("CLASSES_PATH", "models/classes.json")
 
 session = None
-class_names = []
+class_names = ["bird", "cat", "deer", "dog", "frog", "horse"]
 
 @app.on_event("startup")
 def load_model():

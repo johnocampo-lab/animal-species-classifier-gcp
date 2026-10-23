@@ -1,0 +1,93 @@
+---
+description: How to build and extend the GCP animal classifier demo (ML pipeline, serving, cloud, tests).
+alwaysApply: true
+---
+
+# MLdemo — agent build guide
+
+## Product
+
+End-to-end **animal species classifier** (6 classes: bird, cat, deer, dog, frog, horse) for a **GCP PMLE portfolio**: transfer learning → ONNX → **Cloud Run** (scale-to-zero). Budget framing: **&lt;$50**, typical run **&lt;$3**. Optional **Vertex AI Custom Training** (ephemeral GPU), not Vertex Endpoints for serving.
+
+## Stack
+
+| Layer | Tech |
+|--------|------|
+| Training | PyTorch, torchvision MobileNetV3-Small, AdamW on classifier head |
+| Data (default) | CIFAR-10 animals via torchvision + `data/processed/dataset_meta.json` |
+| Data (alt) | STL-10 JPEG folders; `--demo-sample` = synthetic tiles only |
+| Eval | scikit-learn metrics, confusion matrix PNG |
+| Serving | FastAPI, ONNX Runtime CPU, `app/Dockerfile` |
+| GCP | GCS, Artifact Registry, Cloud Build, Cloud Run; Vertex custom job optional |
+
+**Not in scope unless requested:** TFX, TFRecords, GKE (see extensions below).
+
+## Repository layout
+
+- `data/` — `download_data.py`, `dataset.py`, `animal_data.py` (CIFAR meta + splits)
+- `training/` — `train.py`, `evaluate.py`, `model.py`
+- `app/` — `main.py`, `templates/`, `requirements-prod.txt`, `Dockerfile`
+- `cloud/` — `01_setup_gcp.sh` … `04_deploy_cloud_run.sh`, `config.env`, `vertex_job_spec.yaml`
+- `models/` — artifacts (gitignored); `evaluation_results/` gitignored
+
+## Data semantics
+
+- **Default:** `python -m data.download_data` writes `dataset_meta.json`; loaders use official **CIFAR-10 test fold** for test (6k animals). No silent fallback to fake data.
+- **Train/val:** stratified from CIFAR train fold (~85% / ~15% of animal pool).
+- **ImageFolder path:** `train/`, `val/`, `test/` for STL-10 or `--demo-sample`.
+- Labels remapped to 0–5 for CIFAR (`CIFAR10_TO_ANIMAL_INDEX`).
+
+## ML workflow
+
+1. `python -m data.download_data` (or `--demo-sample` / `--dataset stl10`)
+2. `python -m training.train` — val each epoch; `best_model.pt` + final `model.pt` + ONNX export (`onnxscript` required)
+3. `python -m training.evaluate` — **test only**; uses `model.pt` by default
+4. `uvicorn app.main:app` locally; `bash cloud/04_deploy_cloud_run.sh` for prod
+
+Augmentations **only** on train (`data/dataset.py`).
+
+## GCP (this repo)
+
+- Project: `sbox-johnny-001`, region `us-central1` (`cloud/config.env`)
+- **Vertex Custom Training:** `03_submit_vertex_job.sh`, GCS paths in `vertex_job_spec.yaml`
+- **Serving:** Cloud Run only — avoid 24/7 Vertex Prediction endpoints for cost demos
+- **GKE:** not implemented; same container could deploy to GKE if Kubernetes is required
+
+## GCP AI/ML demo catalog (portfolio arcs)
+
+Do **not** cram all services into one repo. Typical arcs:
+
+| Arc | Focus | This repo |
+|-----|--------|-----------|
+| **A** | Custom vision + Cloud Run | **Current** |
+| **B** | MLOps: Pipelines, Experiments, Model Registry → still deploy ONNX to Run | Natural next |
+| **C** | BigQuery / batch scoring (Batch Prediction, Dataflow) | Extension |
+| **D** | Gemini vs fine-tuned model | Extension |
+| **E** | GKE + GPU serving | Only if role requires K8s |
+
+Other products reviewers mention: Document AI, Vision API, Pub/Sub + Dataflow, Vertex Vizier, Workbench, Model Monitoring, Secret Manager, Cloud Deploy.
+
+## Testing
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest                    # unit/smoke (default)
+python -m pytest -m integration     # 1-epoch train + eval
+```
+
+| Doc claim | Tests |
+|-----------|--------|
+| CIFAR splits / meta | `tests/test_animal_data.py` |
+| ImageFolder + transforms | `tests/test_dataset.py` |
+| ONNX export | `tests/test_model_onnx.py` |
+| FastAPI health/predict | `tests/test_app.py` |
+| Train/eval pipeline | `tests/test_integration.py` |
+
+CI: `.github/workflows/test.yml` (unit + integration jobs).
+
+## Conventions for agents
+
+- Small, focused diffs; match existing patterns
+- Run `python -m pytest` before pushing doc/code changes
+- Do not commit `models/`, `data/processed/`, `evaluation_results/`, large raw downloads
+- Use `python -m data.download_data` and `python -m training.train` (module form)

@@ -10,6 +10,8 @@ import os
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
 
+from data.animal_data import get_cifar10_dataloaders, is_cifar10_meta, load_cifar10_meta
+
 # Standard ImageNet normalization parameters
 NORMALIZE = transforms.Normalize(
     mean=[0.485, 0.456, 0.406],
@@ -43,6 +45,17 @@ def get_dataloaders(data_dir: str, batch_size: int = 32, img_size: int = 224, nu
     Creates DataLoaders for train, val, and test splits.
     """
     train_tf, eval_tf = get_transforms(img_size)
+
+    if is_cifar10_meta(data_dir):
+        meta = load_cifar10_meta(data_dir)
+        return get_cifar10_dataloaders(
+            raw_dir=meta["raw_dir"],
+            seed=meta.get("seed", 42),
+            batch_size=batch_size,
+            train_transform=train_tf,
+            eval_transform=eval_tf,
+            num_workers=num_workers,
+        )
 
     train_path = os.path.join(data_dir, "train")
     val_path = os.path.join(data_dir, "val")

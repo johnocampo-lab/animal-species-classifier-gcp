@@ -2,6 +2,7 @@
 torch>=2.2.0
 torchvision>=0.17.0
 onnx>=1.15.0
+onnxscript>=0.1.0
 onnxruntime>=1.17.0
 
 # Image & Data Processing

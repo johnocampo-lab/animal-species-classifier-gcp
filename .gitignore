@@ -1,0 +1,18 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+.idea/
+.vscode/
+
+# Local training corpora / artifacts (keep out of git to avoid huge pushes)
+data/
+holdout/
+logs/
+models/
+evaluation_results/
+serving/models/
+
+.env
+*.log
